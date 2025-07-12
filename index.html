@@ -1143,13 +1143,17 @@
                 hideContextMenu();
             });
             
-            contextCopyProxyLink.addEventListener('click', () => {
-                if (contextMenuTarget && contextMenuTarget.type === 'file') {
-                    const proxyLink = `https://goppx.com/${contextMenuTarget.download_url}`;
-                    copyToClipboard(proxyLink, '代理链接已复制');
-                }
-                hideContextMenu();
-            });
+            contextCopyProxyLink.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (contextMenuTarget && contextMenuTarget.type === 'file') {
+        const [owner, repoName] = currentRepo.split('/');
+        const filePath = currentPath ? `${currentPath}/${contextMenuTarget.name}` : contextMenuTarget.name;
+        const jsdelivrLink = `https://cdn.jsdelivr.net/gh/${owner}/${repoName}@HEAD/${filePath}`;
+        copyToClipboard(jsdelivrLink, 'jsDelivr CDN 链接已复制');
+    }
+    hideContextMenu();
+});
+
             
             contextDelete.addEventListener('click', () => {
                 if (contextMenuTarget) {
@@ -1882,17 +1886,18 @@
                     });
 
                     const copyProxyLinkBtn = document.createElement('button');
-                copyProxyLinkBtn.className = 'glass-btn p-2 ml-2';
-                copyProxyLinkBtn.innerHTML = '<i class="fas fa-share-alt text-green-500"></i>';
-                copyProxyLinkBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (item.type === 'file') {
-                        const proxyLink = `https://goppx.com/${item.download_url}`;
-                        copyToClipboard(proxyLink, '代理链接已复制');
-                    }
-                });
-                    
-                    actionContainer.appendChild(copyProxyLinkBtn);
+copyProxyLinkBtn.className = 'glass-btn p-2 ml-2';
+copyProxyLinkBtn.innerHTML = '<i class="fas fa-share-alt text-green-500"></i>';
+copyProxyLinkBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (item.type === 'file') {
+        const [owner, repoName] = currentRepo.split('/');
+        const filePath = currentPath ? `${currentPath}/${item.name}` : item.name;
+        const jsdelivrLink = `https://cdn.jsdelivr.net/gh/${owner}/${repoName}@HEAD/${filePath}`;
+        copyToClipboard(jsdelivrLink, 'jsDelivr CDN 链接已复制');
+    }
+});
+actionContainer.appendChild(copyProxyLinkBtn);
                     actionContainer.appendChild(copyRawLinkBtn);
                     actionContainer.appendChild(deleteBtn);
                 }
