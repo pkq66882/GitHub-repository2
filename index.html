@@ -1502,7 +1502,7 @@
                 githubToken = token;
                 currentUser = userData;
                 localStorage.setItem('github_token', token);
-                showToast(`欢迎，${userData.login || '用户'}！`);
+                showToast(`欢迎: ${userData.login || '用户'}！`);
                 showMainScreen();
                 loadRepositories();
                 
