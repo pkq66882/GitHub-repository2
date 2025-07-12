@@ -175,19 +175,69 @@
         }
         
         /* 对话框 */
-        .dialog-overlay {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-        }
         
-        .dialog-content {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-        }
+.dialog-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 999;
+}
+
+.dialog-content {
+    background: rgba(255, 255, 255, 0.98); 
+    border-radius: 10px; 
+    padding: 14px 16px; 
+    width: 85%;
+    max-width: 340px; 
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 标题 */
+.dialog-content h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.6rem;
+}
+
+/* 输入框 */
+.dialog-input {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 5px;
+    padding: 8px 12px; 
+    font-size: 0.85rem;
+    height: 36px; 
+    margin-bottom: 0.6rem;
+}
+
+/* 按钮容器 */
+.dialog-buttons {
+    margin-top: 0.8rem;
+    gap: 6px; 
+}
+
+/* 按钮 */
+.dialog-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border-radius: 5px;
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+    .dialog-content {
+        padding: 12px 14px;
+        max-width: 300px;
+    }
+    
+    .dialog-input {
+        padding: 7px 10px;
+        height: 34px;
+    }
+    
+    .dialog-btn {
+        padding: 5px 10px;
+    }
+}
         
         /* 加载动画 */
         @keyframes spin {
