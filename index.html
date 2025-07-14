@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub 文件管理器</title>
+    <title>GitHub Mgr</title>
     <script src="https://cdn.tailwindcss.com/3.3.3"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
@@ -513,7 +513,7 @@
         <div class="glass-panel p-8 w-full max-w-md mx-auto">
             <div class="text-center mb-8">
                 <i class="fab fa-github text-5xl mb-4" style="color: var(--primary-color);"></i>
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">GitHub 文件管理器</h1>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">GitHub Mgr</h1>
                 <p class="text-gray-600">使用您的 GitHub Token 登录</p>
             </div>
             
@@ -2067,41 +2067,23 @@ function hideForkRepoDialog() {
         }
         
         // 下载选中的文件
-        function downloadSelectedFiles() {
-            if (selectedFiles.size === 0) return;
-            
-            // 单个文件直接下载
-            if (selectedFiles.size === 1) {
-                const file = selectedFiles.values().next().value;
-                downloadFile(file);
-                return;
-            }
-            
-            // 多个文件逐个下载
-            showToast(`开始下载 ${selectedFiles.size} 个文件...`);
-            let count = 0;
-            
-            selectedFiles.forEach(file => {
-                if (file.type === 'file' && file.download_url) {
-                    const link = document.createElement('a');
-                    link.href = file.download_url;
-                    link.download = file.name;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    count++;
-                }
-            });
-            
-            showToast(`已开始下载 ${count} 个文件`);
-            exitSelectMode();
-        }
-        
-        // 下载单个文件
-        function downloadFile(file) {
-            if (file.type !== 'file' || !file.download_url) return;
-            
+        async function downloadSelectedFiles() {
+    if (selectedFiles.size === 0) return;
+    
+    // 单个文件直接下载
+    if (selectedFiles.size === 1) {
+        const file = selectedFiles.values().next().value;
+        downloadFile(file);
+        return;
+    }
+    
+    // 多个文件逐个下载，加入延迟避免被浏览器阻止
+    showToast(`开始下载 ${selectedFiles.size} 个文件...`);
+    let count = 0;
+    
+    for (const file of selectedFiles) {
+        if (file.type === 'file' && file.download_url) {
+            // 创建链接并触发下载
             const link = document.createElement('a');
             link.href = file.download_url;
             link.download = file.name;
@@ -2110,8 +2092,33 @@ function hideForkRepoDialog() {
             link.click();
             document.body.removeChild(link);
             
-            showToast(`已开始下载 ${file.name}`);
+            count++;
+            
+            // 如果不是最后一个文件，等待500毫秒
+            if (count < selectedFiles.size) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
         }
+    }
+    
+    showToast(`已开始下载 ${count} 个文件`);
+    exitSelectMode();
+}
+        
+        // 下载单个文件
+        function downloadFile(file) {
+    if (file.type !== 'file' || !file.download_url) return;
+    
+    const link = document.createElement('a');
+    link.href = file.download_url;
+    link.download = file.name; // 设置下载属性
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast(`已开始下载 ${file.name}`);
+}
         
         // 复制到剪贴板
         function copyToClipboard(text, successMessage) {
