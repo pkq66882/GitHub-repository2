@@ -505,6 +505,9 @@
         .context-build-app {
             color: #3b82f6; /* 蓝色表示操作项 */
         }
+        .workflow-icon {
+    color: #8b5cf6; /* 紫色图标 */
+}
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
@@ -910,6 +913,10 @@
         
         // 文件类型图标映射
         const fileTypeIcons = {
+        
+        // 工作流文件
+        yml: 'fas fa-gears workflow-icon',
+        yaml: 'fas fa-gears workflow-icon',
             // 压缩文件
             zip: 'fas fa-file-archive archive-icon',
             rar: 'fas fa-file-archive archive-icon',
@@ -1925,7 +1932,7 @@ function hideForkRepoDialog() {
             return fileTypeIcons[extension] || 'fas fa-file text-gray-400';
         }
         
-        // 渲染文件列表
+        // 渲染文件列表（修改部分）
         function renderFileList(items) {
             fileListElement.innerHTML = '';
             loadingElement.classList.add('hidden');
@@ -1998,53 +2005,8 @@ function hideForkRepoDialog() {
                 infoContainer.appendChild(name);
                 infoContainer.appendChild(meta);
                 
-                const actionContainer = document.createElement('div');
-                actionContainer.className = 'flex items-center ml-4';
-                
-                if (item.type === 'file') {
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'glass-btn p-2 ml-2';
-                    deleteBtn.innerHTML = '<i class="fas fa-trash text-red-500"></i>';
-                    deleteBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        showConfirmDialog(
-                            '确认删除',
-                            `您确定要删除文件 "${item.name}" 吗？此操作不可撤销。`,
-                            item
-                        );
-                    });
-
-                    const copyRawLinkBtn = document.createElement('button');
-                    copyRawLinkBtn.className = 'glass-btn p-2 ml-2';
-                    copyRawLinkBtn.innerHTML = '<i class="fas fa-link text-blue-500"></i>';
-                    copyRawLinkBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (item.type === 'file') {
-                            copyToClipboard(item.download_url, 'Raw 链接已复制');
-                        }
-                    });
-
-                    const copyProxyLinkBtn = document.createElement('button');
-                    copyProxyLinkBtn.className = 'glass-btn p-2 ml-2';
-                    copyProxyLinkBtn.innerHTML = '<i class="fas fa-share-alt text-green-500"></i>';
-                    copyProxyLinkBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (item.type === 'file') {
-                            const [owner, repoName] = currentRepo.split('/');
-                            const filePath = currentPath ? `${currentPath}/${item.name}` : item.name;
-                            const jsdelivrLink = `https://cdn.jsdelivr.net/gh/${owner}/${repoName}@HEAD/${filePath}`;
-                            copyToClipboard(jsdelivrLink, 'jsDelivr CDN 链接已复制');
-                        }
-                    });
-                    actionContainer.appendChild(copyProxyLinkBtn);
-                    actionContainer.appendChild(copyRawLinkBtn);
-                    actionContainer.appendChild(deleteBtn);
-                }
-                
                 fileItem.appendChild(icon);
-                fileItem.appendChild(infoContainer);
-                fileItem.appendChild(actionContainer);
-                
+                fileItem.appendChild(infoContainer);                               
                 fileListElement.appendChild(fileItem);
             });
         }
@@ -2067,23 +2029,41 @@ function hideForkRepoDialog() {
         }
         
         // 下载选中的文件
-        async function downloadSelectedFiles() {
-    if (selectedFiles.size === 0) return;
-    
-    // 单个文件直接下载
-    if (selectedFiles.size === 1) {
-        const file = selectedFiles.values().next().value;
-        downloadFile(file);
-        return;
-    }
-    
-    // 多个文件逐个下载，加入延迟避免被浏览器阻止
-    showToast(`开始下载 ${selectedFiles.size} 个文件...`);
-    let count = 0;
-    
-    for (const file of selectedFiles) {
-        if (file.type === 'file' && file.download_url) {
-            // 创建链接并触发下载
+        function downloadSelectedFiles() {
+            if (selectedFiles.size === 0) return;
+            
+            // 单个文件直接下载
+            if (selectedFiles.size === 1) {
+                const file = selectedFiles.values().next().value;
+                downloadFile(file);
+                return;
+            }
+            
+            // 多个文件逐个下载
+            showToast(`开始下载 ${selectedFiles.size} 个文件...`);
+            let count = 0;
+            
+            selectedFiles.forEach(file => {
+                if (file.type === 'file' && file.download_url) {
+                    const link = document.createElement('a');
+                    link.href = file.download_url;
+                    link.download = file.name;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    count++;
+                }
+            });
+            
+            showToast(`已开始下载 ${count} 个文件`);
+            exitSelectMode();
+        }
+        
+        // 下载单个文件
+        function downloadFile(file) {
+            if (file.type !== 'file' || !file.download_url) return;
+            
             const link = document.createElement('a');
             link.href = file.download_url;
             link.download = file.name;
@@ -2092,33 +2072,8 @@ function hideForkRepoDialog() {
             link.click();
             document.body.removeChild(link);
             
-            count++;
-            
-            // 如果不是最后一个文件，等待500毫秒
-            if (count < selectedFiles.size) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+            showToast(`已开始下载 ${file.name}`);
         }
-    }
-    
-    showToast(`已开始下载 ${count} 个文件`);
-    exitSelectMode();
-}
-        
-        // 下载单个文件
-        function downloadFile(file) {
-    if (file.type !== 'file' || !file.download_url) return;
-    
-    const link = document.createElement('a');
-    link.href = file.download_url;
-    link.download = file.name; // 设置下载属性
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showToast(`已开始下载 ${file.name}`);
-}
         
         // 复制到剪贴板
         function copyToClipboard(text, successMessage) {
@@ -2788,124 +2743,189 @@ function encodeGitHubPath(path) {
         
         // 构建APP功能
         async function buildApp(repoInfo) {
-            try {
-                const [owner, repo] = repoInfo.path.split('/');
-                
-                // 显示构建状态
-                buildStatusEl.classList.remove('hidden');
-                buildIcon.className = 'fas fa-cog animate-spin text-blue-500 mr-2';
-                buildMessage.textContent = '正在启动构建任务...';
-                
-                // 设置进度条
-                progressBar.style.width = '0%';
-                progressText.textContent = '0%';
-                
-                // 触发GitHub Actions工作流
-                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/test.yml/dispatches`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `token ${githubToken}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ref: 'main', // 使用main分支
-                        inputs: {
-                            environment: 'production',
-                            version: '1.0.0'
-                        }
-                    })
-                });
-                
-                if (response.status === 204) {
-                    // 成功触发工作流
-                    buildMessage.textContent = '构建任务已启动！正在监控进度...';
-                    
-                    // 开始监控构建进度
-                    monitorBuildProgress(owner, repo);
-                } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || '触发构建失败');
+    try {
+        const [owner, repo] = repoInfo.path.split('/');
+        
+        // 显示构建状态
+        buildStatusEl.classList.remove('hidden');
+        buildIcon.className = 'fas fa-cog animate-spin text-blue-500 mr-2';
+        buildMessage.textContent = '正在扫描工作流文件...';
+        
+        // 1. 获取工作流文件列表
+        const workflowsResponse = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/.github/workflows`,
+            {
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
                 }
-            } catch (error) {
-                console.error('构建APP错误:', error);
-                buildIcon.className = 'fas fa-times-circle text-red-500 mr-2';
-                buildMessage.textContent = '构建失败: ' + error.message;
             }
+        );
+        
+        if (!workflowsResponse.ok) {
+            const errorData = await workflowsResponse.json();
+            throw new Error(errorData.message || '获取工作流文件失败');
         }
         
-        // 监控构建进度
-        async function monitorBuildProgress(owner, repo) {
-            // 清除之前的定时器
-            clearInterval(buildTimer);
-            
-            // 设置进度条动画
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                if (progress < 95) {
-                    progress += 5;
-                    progressBar.style.width = `${progress}%`;
-                    progressText.textContent = `${progress}%`;
+        const workflowFiles = await workflowsResponse.json();
+        const validWorkflows = workflowFiles.filter(file => 
+            file.name.endsWith('.yml') || file.name.endsWith('.yaml')
+        );
+        
+        if (validWorkflows.length === 0) {
+            throw new Error('未找到工作流文件');
+        }
+        
+        // 2. 自动选择工作流（优先选择包含build的）
+        let selectedWorkflow = validWorkflows.find(file => 
+            file.name.toLowerCase().includes('build')
+        ) || validWorkflows[0];
+        
+        const workflowFileName = selectedWorkflow.name;
+        buildMessage.textContent = `找到工作流: ${workflowFileName}`;
+        
+        // 3. 获取仓库默认分支
+        const repoInfoResponse = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}`,
+            {
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
                 }
-            }, 2000);
+            }
+        );
+        
+        if (!repoInfoResponse.ok) {
+            throw new Error('获取仓库信息失败');
+        }
+        
+        const repoData = await repoInfoResponse.json();
+        const defaultBranch = repoData.default_branch;
+        
+        // 4. 触发工作流（不发送任何输入参数）
+        const dispatchResponse = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowFileName}/dispatches`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ref: defaultBranch
+                })
+            }
+        );
+        
+        if (dispatchResponse.status === 204) {
+            buildMessage.textContent = `工作流 ${workflowFileName} 已触发！监控进度中...`;
+            monitorBuildProgress(owner, repo);
+        } else {
+            const errorData = await dispatchResponse.json();
+            throw new Error(errorData.message || '触发工作流失败');
+        }
+    } catch (error) {
+        console.error('构建APP错误:', error);
+        buildIcon.className = 'fas fa-times-circle text-red-500 mr-2';
+        buildMessage.textContent = '构建失败: ' + error.message;
+    }
+}
+
+// 修改监控函数
+async function monitorBuildProgress(owner, repo) {
+    // 清除之前的定时器
+    clearInterval(buildTimer);
+    
+    // 设置进度条动画
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        if (progress < 95) {
+            progress += 5;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${progress}%`;
+        }
+    }, 2000);
+    
+    // 每10秒检查一次构建状态
+    buildTimer = setInterval(async () => {
+        try {
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runs`, {
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
             
-            // 每10秒检查一次构建状态
-            buildTimer = setInterval(async () => {
-                try {
-                    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runs?event=workflow_dispatch`, {
-                        headers: {
-                            'Authorization': `token ${githubToken}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('获取构建状态失败');
-                    }
-                    
-                    const data = await response.json();
-                    const latestRun = data.workflow_runs[0];
-                    
-                    if (!latestRun) {
-                        return;
-                    }
-                    
-                    // 更新构建状态
-                    buildStatus = latestRun.status;
-                    
-                    switch (latestRun.status) {
-                        case 'completed':
-                            clearInterval(progressInterval);
-                            clearInterval(buildTimer);
-                            
-                            if (latestRun.conclusion === 'success') {
-                                progressBar.style.width = '100%';
-                                progressText.textContent = '100%';
-                                buildIcon.className = 'fas fa-check-circle text-green-500 mr-2';
-                                buildMessage.innerHTML = '构建成功！<br>APK文件可在仓库的Artifacts中下载';
-                            } else {
-                                buildIcon.className = 'fas fa-times-circle text-red-500 mr-2';
-                                buildMessage.textContent = `构建失败: ${latestRun.conclusion}`;
-                            }
-                            break;
-                            
-                        case 'in_progress':
-                            buildMessage.textContent = '构建正在进行中...';
-                            break;
-                            
-                        case 'queued':
-                            buildMessage.textContent = '构建任务排队中...';
-                            break;
-                    }
-                } catch (error) {
-                    console.error('监控构建进度错误:', error);
+            if (!response.ok) {
+                throw new Error('获取构建状态失败');
+            }
+            
+            const data = await response.json();
+            const latestRun = data.workflow_runs[0];
+            
+            if (!latestRun) {
+                return;
+            }
+            
+            // 更新构建状态
+            buildStatus = latestRun.status;
+            
+            switch (latestRun.status) {
+                case 'completed':
                     clearInterval(progressInterval);
                     clearInterval(buildTimer);
-                    buildIcon.className = 'fas fa-times-circle text-red-500 mr-2';
-                    buildMessage.textContent = '监控失败: ' + error.message;
-                }
-            }, 10000);
+                    
+                    if (latestRun.conclusion === 'success') {
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        buildIcon.className = 'fas fa-check-circle text-green-500 mr-2';
+                        
+                        // 获取制品信息
+                        const artifactsResponse = await fetch(latestRun.artifacts_url, {
+                            headers: {
+                                'Authorization': `token ${githubToken}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        
+                        if (artifactsResponse.ok) {
+                            const artifactsData = await artifactsResponse.json();
+                            if (artifactsData.artifacts.length > 0) {
+                                const artifactLinks = artifactsData.artifacts.map(a => 
+                                    `<a href="${a.archive_download_url}" target="_blank" class="text-blue-500">${a.name}</a>`
+                                ).join('<br>');
+                                
+                                buildMessage.innerHTML = `构建成功！下载制品:<br>${artifactLinks}`;
+                            } else {
+                                buildMessage.innerHTML = '构建成功！<br>可在仓库的Actions页面查看详情';
+                            }
+                        } else {
+                            buildMessage.innerHTML = '构建成功！<br>可在仓库的Actions页面查看详情';
+                        }
+                    } else {
+                        buildIcon.className = 'fas fa-times-circle text-red-500 mr-2';
+                        buildMessage.textContent = `构建失败: ${latestRun.conclusion}`;
+                    }
+                    break;
+                    
+                case 'in_progress':
+                    buildMessage.textContent = '构建正在进行中...';
+                    break;
+                    
+                case 'queued':
+                    buildMessage.textContent = '构建任务排队中...';
+                    break;
+            }
+        } catch (error) {
+            console.error('监控构建进度错误:', error);
+            clearInterval(progressInterval);
+            clearInterval(buildTimer);
+            buildIcon.className = 'fas fa-times-circle text-red-500 mr-2';
+            buildMessage.textContent = '监控失败: ' + error.message;
         }
+    }, 10000);
+}
         // 复刻仓库函数
 async function forkRepository(repoUrl) {
     try {
